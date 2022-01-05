@@ -141,47 +141,42 @@ function M:task_update(plugin_name, status)
   print(plugin_name .. " - " .. status)
 end
 
-local packer_display_open = require("packer.display").open
-require("packer.display").open = function(self)
-  local disp = packer_display_open(self)
-  local total = 0
-  local finished = 0
+local function enable_packer_status()
+  local packer_display_open = require("packer.display").open
+  require("packer.display").open = function(self)
+    local disp = packer_display_open(self)
+    local total = 0
+    local finished = 0
 
-  local function print_update()
-    local line = "Installed " .. finished .. " of " .. total
-    vim.schedule(function()
-      vim.fn.chansend(1, { "\r" .. line .. "\n" })
-    end)
-  end
+    local function print_update()
+      local line = "Installed " .. finished .. " of " .. total
+      vim.schedule(function()
+        vim.fn.chansend(1, { "\r" .. line .. "\n" })
+      end)
+    end
 
-  disp.task_succeeded = function()
-    finished = finished + 1
-    print_update()
+    disp.task_succeeded = function()
+      finished = finished + 1
+      print_update()
+    end
+    disp.task_failed = function(_, plugin_name)
+      print("!! " .. plugin_name .. ": failed to install!")
+      finished = finished + 1
+      print_update()
+    end
+    disp.task_start = function()
+      require("packer.display").status.running = true
+      total = total + 1
+      print_update()
+    end
+    return disp
   end
-  disp.task_failed = function(_, plugin_name)
-    print("!! " .. plugin_name .. ": failed to install!")
-    finished = finished + 1
-    print_update()
-  end
-  disp.task_start = function()
-    require("packer.display").status.running = true
-    total = total + 1
-    print_update()
-  end
-  return disp
 end
 
 function M.init(opts)
-  local core_install_dir = opts.core_install_dir or vim.fn.stdpath "data" .. "/core"
-  assert(vim.fn.executable "curl", "curl is not installed")
-  assert(vim.fn.executable "unzip", "unzip is not installed")
-
-  if not utils.is_directory(core_install_dir) then
-    assert(vim.fn.mkdir(core_install_dir), "unable to create core plugin install directory")
+  if not _G.__lvim_test_env then
+    enable_packer_status()
   end
-
-  local download_dir = mkdir_tmp()
-  assert(download_dir, "unable to create core plugin download directory")
 
   local core_plugins = require "lvim.plugins"
 
@@ -198,7 +193,18 @@ function M.init(opts)
       plug.disable = false
     end
 
-    if os.getenv "LVIM_DEV" ~= "1" then
+    if not _G.__lvim_dev_env then
+      local core_install_dir = opts.core_install_dir or vim.fn.stdpath "data" .. "/core"
+      assert(vim.fn.executable "curl", "curl is not installed")
+      assert(vim.fn.executable "unzip", "unzip is not installed")
+
+      if not utils.is_directory(core_install_dir) then
+        assert(vim.fn.mkdir(core_install_dir), "unable to create core plugin install directory")
+      end
+
+      local download_dir = mkdir_tmp()
+      assert(download_dir, "unable to create core plugin download directory")
+
       timer:start()
       print "Cleaning up stale plugins..."
       print "Downloading core plugins..."

@@ -277,7 +277,7 @@ local plugins = {
   },
 }
 
-if os.getenv "LVIM_DEV" ~= "1" then
+if _G.__lvim_dev_env then
   for _, plugin in ipairs(plugins) do
     -- packer already exists, don't replace it
     if plugin[1] ~= "wbthomason/packer.nvim" then

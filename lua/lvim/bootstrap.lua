@@ -72,6 +72,9 @@ function M:init(base_dir, updating)
   self.packer_cache_path = join_paths(self.config_dir, "plugin", "packer_compiled.lua")
   self.lua_cache_path = join_paths(self.cache_dir, "lvim_cache")
 
+  _G.__lvim_test_env = os.getenv "LVIM_TEST_ENV" == "true"
+  _G.__lvim_dev_env = os.getenv "LVIM_DEV" == "1"
+
   ---Get the full path to LunarVim's base directory
   ---@return string
   function _G.get_lvim_base_dir()
